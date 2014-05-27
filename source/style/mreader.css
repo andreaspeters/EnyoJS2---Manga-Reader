@@ -1,0 +1,36 @@
+div[id ^= "app_mainView_productPanel_item"] {
+	width: 200px;
+	height: 200px;
+	float: left;
+	font-size: 13px;
+	font-weight: bold;	
+	text-align: center;
+}
+
+img[id ^= "app_mainView_productPanel_mangaPreview"] {
+	margin-left: auto;
+	margin-right: auto;
+	display: block;
+	padding-bottom: 10px;
+}
+
+img[id ^= "app_mainView_productPanel_manga_image"] {
+	float:left;
+	height:90%;
+}
+
+div[id ^= "app_mainView_productPanel_manga_title"] {
+	font-size: 16px;
+	font-weight: bold;
+	height: 50px;
+	margin-left: 50px;
+	margin-top: 50px;
+}
+
+div[id ^= "app_mainView_productPanel_manga_description"] {
+	margin-left: 50px;
+	font-size: 13px;
+	width: 50%;
+}
+
+
