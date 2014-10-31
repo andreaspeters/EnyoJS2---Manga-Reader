@@ -1,15 +1,7 @@
-## About
+MReader is a Manga Reader for EnyoJS2 devices. It's using Mangaeden as Manga Database to load all there mangas.
 
-bootplate is a template for a minimal Enyo and Onyx web application.
-You would normally use this to setup your local environment then go and modify the
-files to build your own application.  By itself, it does almost nothing.
+[Version 0.0.2]
 
-## Downloading
+	-	Save the last viewed manga and reload it after app restart
+	-	EnyoJS2 framework update
 
-To download a version of bootplate with all of the submodules populated
-for quick use, visit http://enyojs.com/get-enyo/.  The download link in GitHub will
-give you just the bootplate repo without any of the supporting libraries.
-
-As an alternative, you can use a Git client to clone this repo and then initialize
-submodules. This is good if you want to work with the latest version of the code from
-GitHub that we may not have packaged into an official release.

@@ -1,11 +1,11 @@
 enyo.kind({
 	name: "MyApps.MangaView",
-	kind: "Panels",
+	kind: "FittableRows",
 	mainMenuPanelsCount: 0,
-	config: {'server': "www.mangaeden.com"},
+	config: {'server': "www.mangaeden.com", 'lastmanga': "", 'lastchapter': ""},
 	menu: [],
 	components:[
-		{kind: "enyo.Panels", name: "mainMenuPanels", arrangerKind: "CardArranger",fit: true, style: "background: url(assets/bg.jpg);", components: [
+		{kind: "Panels", name: "mainMenuPanels", arrangerKind: "CardArranger",fit: true, style: "background: url(assets/bg.jpg);", components: [
 			{kind:"FittableRows", components: [
 				{kind: "enyo.List", name: "mangaList", fit: true, onSetupItem: "setupMangaList", components: [	
 					{class: "item", name: "item", components: [
@@ -117,6 +117,9 @@ enyo.kind({
 		if (inSender.isSelected(inEvent.index)) {	
 			this.jsonCall("/manga/"+this.manga[inEvent.index].i, enyo.bind(this,"successGetChapterList"), enyo.bind(this, "errorML"));
 			this.$.mainMenuPanels.setIndex(1);
+
+			// Aktuellen Manga Merken
+			localStorage.setItem("lastmanga", this.manga[inEvent.index].i);
 		}
 	},
 
@@ -126,6 +129,17 @@ enyo.kind({
 
 	rendered: function() {
 		this.jsonCall("/list/0/", enyo.bind(this,"successGetList"), enyo.bind(this,"errorML"));
+
+		try {
+            this.config['lastmanga'] = localStorage.getItem("lastmanga");
+        } catch (e) {
+        }
+
+		if (this.config['lastmanga']) {
+			this.jsonCall("/manga/"+this.config['lastmanga'], enyo.bind(this,"successGetChapterList"), enyo.bind(this, "errorML")    );
+			this.$.mainMenuPanels.setIndex(1);
+		}
+
 	},
 
 });
