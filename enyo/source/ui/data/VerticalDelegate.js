@@ -40,10 +40,22 @@
 			so.horizontal  = so.horizontal || 'hidden';
 			// determine if the _controlsPerPage_ property has been set on the list
 			if (list.controlsPerPage !== null && !isNaN(list.controlsPerPage)) {
-				this._staticControlsPerPage = true;
+				list._staticControlsPerPage = true;
 			}
 		},
 		
+		/**
+		* @private
+		*/
+		generate: function (list) {
+			for (var i=0, p; (p=list.pages[i]); ++i) {
+				this.generatePage(list, p, p.index);
+			}
+			this.adjustPagePositions(list);
+			this.adjustBuffer(list);
+		},
+
+
 		/**
 		* Performs a hard reset of the [list's]{@link enyo.DataList} pages and children.
 		* Scrolls to the top and resets each page's children to have the correct indices.
@@ -52,19 +64,13 @@
 		* @private
 		*/
 		reset: function (list) {
-			// go ahead and reset the page content and the pages to their original
-			// positions
-			for (var i=0, p; (p=list.pages[i]); ++i) {
-				this.generatePage(list, p, i);
-			}
-			// adjust page positions
-			this.adjustPagePositions(list);
-			// now update the buffer
-			this.adjustBuffer(list);
+			list.$.page1.index = 0;
+			list.$.page2.index = 1;
+			this.generate(list);
 			list.hasReset = true;
 			// reset the scroller so it will also start from the 'top' whatever that may
 			// be (left/top)
-			list.$.scroller.scrollTo(0, 0);
+			this.scrollTo(list, 0, 0);
 		},
 		
 		/**
@@ -82,9 +88,10 @@
 				firstIndex  = list.$.page1.index || 0,
 				secondIndex = list.$.page2.index || 1;
 			pos.firstPage   = (
-				metrics[firstIndex][upperProp] < metrics[secondIndex][upperProp]
-				? list.$.page1
-				: list.$.page2			
+				metrics[firstIndex] && metrics[secondIndex] &&
+				(metrics[secondIndex][upperProp] < metrics[firstIndex][upperProp])
+				? list.$.page2
+				: list.$.page1			
 			);
 			pos.lastPage = (pos.firstPage === list.$.page1? list.$.page2: list.$.page1);
 			return pos;
@@ -99,30 +106,8 @@
 		*/
 		refresh: function (list) {
 			if (!list.hasReset) { return this.reset(list); }
-			var pageCount   = Math.max(this.pageCount(list) - 1, 0),
-				firstIndex  = list.$.page1.index,
-				secondIndex = list.$.page2.index;
-			if (firstIndex > pageCount) {
-				firstIndex = pageCount;
-				secondIndex = (firstIndex > 0) ? firstIndex - 1 : firstIndex + 1;
-			}
-			if (secondIndex > pageCount) {
-				if ((firstIndex + 1) > pageCount && (firstIndex - 1) >= 0) {
-					secondIndex = firstIndex - 1;
-				} else {
-					secondIndex = firstIndex + 1;
-				}
-			}
-			list.$.page1.index = firstIndex;
-			list.$.page2.index = secondIndex;
-			// update according to their current indices
-			for (var i=0, p; (p=list.pages[i]); ++i) {
-				this.generatePage(list, p, p.index);
-			}
-			// adjust their positions in case they've changed at all
-			this.adjustPagePositions(list);
-			// now update the buffer
-			this.adjustBuffer(list);
+			this.assignPageIndices(list);
+			this.generate(list);
 		},
 		
 		/**
@@ -169,9 +154,6 @@
 			page.start  = perPage * index;
 			// the last index for this generated page
 			page.end    = Math.min((data.length - 1), (page.start + perPage) - 1);
-			
-			if (page.start < 0) page.start = null;
-			if (page.end < 0) page.end = null;
 			
 			// if generating a control we need to use the correct page as the control parent
 			list.controlParent = page;
@@ -238,6 +220,22 @@
 			}
 			return list.fixedChildSize || list.childSize || (list.childSize = 100); // we have to start somewhere
 		},
+
+		/**
+		* Calculates the number of controls required to fill a page. This functionality is broken
+		* out of [controlsPerPage]{@link DataList.delegates.vertical#controlsPerPage} so that it
+		* can be overridden by delegates that inherit from this one.
+		*
+		* @private
+		*/
+		calculateControlsPerPage: function (list) {
+			var fn              = this[list.psizeProp],
+				multi           = list.pageSizeMultiplier || this.pageSizeMultiplier,
+				childSize       = this.childSize(list);
+
+			// using height/width of the available viewport times our multiplier value
+			return Math.ceil(((fn.call(this, list) * multi) / childSize) + 1);
+		},
 		
 		/**
 		* When necessary, updates the the value of `controlsPerPage` dynamically to ensure that
@@ -249,29 +247,21 @@
 		*
 		* @private
 		*/
-		controlsPerPage: function (list) {
-			if (this._staticControlsPerPage) {
+		controlsPerPage: function (list, forceUpdate) {
+			if (list._staticControlsPerPage) {
 				return list.controlsPerPage;
 			} else {
 				var updatedControls = list._updatedControlsPerPage,
 					updatedBounds   = list._updatedBounds,
-					childSize       = list.childSize,
-					perPage         = list.controlsPerPage,
-					sizeProp        = list.psizeProp,
-					multi           = list.pageSizeMultiplier || this.pageSizeMultiplier,
-					fn              = this[sizeProp];
+					perPage         = list.controlsPerPage;
 				// if we've never updated the value or it was done longer ago than the most
 				// recent updated sizing/bounds we need to update
-				if (!updatedControls || (updatedControls < updatedBounds)) {
-					// we always update the default child size value first, here
-					childSize = this.childSize(list);
-					// using height/width of the available viewport times our multiplier value
-					perPage   = list.controlsPerPage = Math.ceil(((fn.call(this, list) * multi) / childSize) + 1);
+				if (forceUpdate || !updatedControls || (updatedControls < updatedBounds)) {
+					perPage = list.controlsPerPage = this.calculateControlsPerPage(list);
 					// update our time for future comparison
 					list._updatedControlsPerPage = enyo.perfNow();
 				}
-				/*jshint -W093 */
-				return (list.controlsPerPage = perPage);
+				return perPage;
 			}
 		},
 		
@@ -283,6 +273,32 @@
 		pageForIndex: function (list, i) {
 			var perPage = list.controlsPerPage || this.controlsPerPage(list);
 			return Math.floor(i / (perPage || 1));
+		},
+
+		/**
+		* An indirect interface to the list's scroller's scrollToControl()
+		* method. We provide this to create looser coupling between the
+		* delegate and the list / scroller, and to enable subkinds of the
+		* delegate to easily override scrollToControl() functionality to
+		* include options specific to the scroller being used.
+		*
+		* @private
+		*/
+		scrollToControl: function (list, control) {
+			list.$.scroller.scrollToControl(control);
+		},
+		
+		/**
+		* An indirect interface to the list's scroller's scrollTo()
+		* method. We provide this to create looser coupling between the
+		* delegate and the list / scroller, and to enable subkinds of the
+		* delegate to easily override scrollTo() functionality to
+		* include options specific to the scroller being used.
+		*
+		* @private
+		*/
+		scrollTo: function (list, x, y) {
+			list.$.scroller.scrollTo(x, y);
 		},
 		
 		/**
@@ -302,13 +318,14 @@
 			// if there isn't one, then we know we need to go ahead and
 			// update, otherwise we should be able to use the scroller's
 			// own methods to find it
+			list.$.scroller.stop();
 			if (c) {
-				list.$.scroller.scrollIntoView(c, this.pagePosition(list, p));
+				this.scrollToControl(list, c);
 			} else {
 				// we do this to ensure we trigger the paging event when necessary
 				this.resetToPosition(list, this.pagePosition(list, p));
 				// now retry the original logic until we have this right
-				enyo.asyncMethod(function () {
+				list.startJob('vertical_delegate_scrollToIndex', function () {
 					list.scrollToIndex(i);
 				});
 			}
@@ -528,6 +545,16 @@
 		},
 
 		/**
+		* Sets the scroll position on the [scroller]{@link enyo.Scroller}
+		* owned by the given list.
+		*
+		* @private
+		*/
+		setScrollPosition: function (list, pos) {
+			list.$.scroller.setScrollTop(pos);
+		},
+
+		/**
 		* @private
 		*/
 		scrollHandler: function (list, bounds) {
@@ -547,6 +574,7 @@
 			} else if ((bounds.xDir === -1 || bounds.yDir === -1) && pos.firstPage.index !== 0) {
 				this.generatePage(list, pos.lastPage, pos.firstPage.index - 1);
 				this.adjustPagePositions(list);
+				this.adjustBuffer(list);
 				// note that the reference to the page positions has been udpated by
 				// another method so we trust the actual pages
 				list.triggerEvent('paging', {
@@ -588,27 +616,68 @@
 		},
 
 		/**
+		* Determines which two pages to generate, based on a
+		* specific target scroll position.
+		*
+		* @private
+		*/
+		assignPageIndices: function (list, targetPos) {
+			var index1, index2, bias,
+				pc = this.pageCount(list),
+				last = Math.max(0, pc - 1),
+				currentPos = this.getScrollPosition(list);
+
+			// If no target position was specified, use the current position
+			if (typeof targetPos == 'undefined') {
+				targetPos = currentPos;
+			}
+			
+			// Make sure the target position is in-bounds
+			targetPos = Math.max(0, Math.min(targetPos, list.bufferSize));
+
+			// First, we find the target page (the one that covers the target position)
+			index1 = Math.floor(targetPos / this.defaultPageSize(list));
+			index1 = Math.min(index1, last);
+
+			// Our list always generates two pages worth of content, so -- now that we have
+			// our target page -- we need to pick either the preceding page or the following
+			// page to generate as well. To help us decide, we first determine how our
+			// target position relates to our current position. If we know which direction
+			// we're moving in, it's generally better to render the page that lies between
+			// our current position and our target position, in case we are about to scroll
+			// "lazily" to an element near the edge of our target page. If we don't have any
+			// information to work with, we arbitrarily favor the following page.
+			bias = (targetPos > currentPos) ? -1 : 1;
+
+			// Now we know everything we need to choose our second page...
+			index2 =
+				// If our target page is the first page (index == 0), there is no preceding
+				// page -- so we choose the following page (index == 1). Note that our
+				// our target page will always be (index == 0) if the list is empty or has
+				// only one page worth of content. Picking (index == 1) for our second page
+				// in these cases is fine, though the page won't contain any elements.
+				(index1 === 0) ? 1 :
+				// If target page is the last page, there is no following page -- so we choose
+				// the preceding page.
+				(index1 === last) ? index1 - 1 :
+				// In all other cases, we pick a page using our previously determined bias.  
+				index1 + bias;
+
+			list.$.page1.index = index1;
+			list.$.page2.index = index2;
+		},
+
+		/**
 		* @private
 		*/
 		resetToPosition: function (list, px) {
-			if (px >= 0 && px <= list.bufferSize) {
-				var index = Math.ceil(px / this.defaultPageSize(list)),
-					last  = this.pageCount(list) - 1,
-					pos   = this.pagesByPosition(list);
-				if (
-					(px <= pos.firstPage[list.upperProp]) ||
-					(px >= pos.lastPage[list.lowerProp])
-				) {
-					list.$.page1.index = (index = Math.min(index, last));
-					list.$.page2.index = (index === last? (index-1): (index+1));
-					this.refresh(list);
-					list.triggerEvent('paging', {
-						start: list.$.page1.start,
-						end: list.$.page2.end,
-						action: 'reset'
-					});
-				}
-			}
+			this.assignPageIndices(list, px);
+			this.generate(list);
+			list.triggerEvent('paging', {
+				start: list.$.page1.start,
+				end: list.$.page2.end,
+				action: 'reset'
+			});
 		},
 		/**
 		* Handles scroll [events]{@glossary event} for the given [list]{@link enyo.DataList}.
@@ -623,16 +692,35 @@
 			if (!list.usingScrollListener) {
 				var threshold = list.scrollThreshold,
 					bounds    = event.scrollBounds,
+					ds        = this.defaultPageSize(list),
 					lowerProp = list.lowerProp,
-					upperProp = list.upperProp;
-				bounds[upperProp] = this.getScrollPosition(list);
+					upperProp = list.upperProp,
+					pos       = bounds[upperProp],
+					ut        = threshold[upperProp],
+					lt        = threshold[lowerProp];
 				if (bounds.xDir === 1 || bounds.yDir === 1) {
-					if (!isNaN(threshold[lowerProp]) && (bounds[upperProp] >= threshold[lowerProp])) {
-						this.scrollHandler(list, bounds);
+					if (!isNaN(lt)) {
+						if (pos >= lt) {
+							if (pos >= lt + ds) {
+								// big jump
+								this.resetToPosition(list, pos);
+							} else {
+								// continuous scrolling
+								this.scrollHandler(list, bounds);
+							}
+						}
 					}
 				} else if (bounds.yDir === -1 || bounds.xDir === -1) {
-					if (!isNaN(threshold[upperProp]) && (bounds[upperProp] <= threshold[upperProp])) {
-						this.scrollHandler(list, bounds);
+					if (!isNaN(ut) && (pos <= ut)) {
+						if (pos <= ut) {
+							if (pos <= ut - ds) {
+								// big jump
+								this.resetToPosition(list, pos);
+							} else {
+								//continuous scrolling
+								this.scrollHandler(list, bounds);
+							}
+						}
 					}
 				}
 			}
@@ -644,9 +732,19 @@
 		* @private
 		*/
 		didResize: function (list) {
+			var prevCPP = list.controlsPerPage;
+
 			list._updateBounds = true;
 			this.updateBounds(list);
-			this.refresh(list);
+			// Need to update our controlsPerPage value immediately,
+			// before any cached metrics are used
+			this.controlsPerPage(list);
+			if (prevCPP !== list.controlsPerPage) {
+				// since we are now using a different number of controls per page,
+				// we need to invalidate our cached page metrics
+				list.metrics.pages = {};
+			}
+			this.resetToPosition(list);
 		},
 
 		/**

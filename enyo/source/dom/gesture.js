@@ -7,8 +7,8 @@
 	* and mobile platforms handle basic input differently.
 	*
 	* For more information on normalized input events and their associated properties, see the
-	* documentation on [Event Handling]{@linkplain docs/key-concepts/event-handling.html} in
-	* the Enyo Developer Guide.
+	* documentation on [Event Handling]{@linkplain $dev-guide/key-concepts/event-handling.html}
+	* in the Enyo Developer Guide.
 	*
 	* @namespace enyo.gesture
 	* @public
@@ -84,20 +84,21 @@
 		* @public
 		*/
 		down: function(evt) {
-			// set holdpulse defaults
-			this.drag.holdPulseConfig = enyo.clone(this.drag.holdPulseDefaultConfig);
-
-			// cancel any hold since it's possible in corner cases to get a down without an up
 			var e = this.makeEvent('down', evt);
 
-			// expose method for configuring holdpulse options
-			e.configureHoldPulse = this.configureHoldPulse;
+			// prepare for hold
+			this.drag.prepareHold(e);
+
+			// enable prevention of tap event
+			e.preventTap = function() {
+				e._tapPrevented = true;
+			};
 
 			enyo.dispatch(e);
 			this.downEvent = e;
 
-			// workaround to allow event to propagate to control before hold job begins
-			this.drag.cancelHold();
+			// start hold, now that control has had a chance
+			// to override the holdPulse configuration
 			this.drag.beginHold(e);
 		},
 
@@ -128,12 +129,18 @@
 		*/
 		up: function(evt) {
 			var e = this.makeEvent('up', evt);
-			var tapPrevented = false;
+
+			// We have added some logic to synchronize up and down events in certain scenarios (i.e.
+			// clicking multiple buttons with a mouse) and to generally guard against any potential
+			// asymmetry, but a full solution would be to maintain a map of up/down events as an 
+			// ideal solution, for future work.
+			e._tapPrevented = this.downEvent && this.downEvent._tapPrevented && this.downEvent.which == e.which;
 			e.preventTap = function() {
-				tapPrevented = true;
+				e._tapPrevented = true;
 			};
+
 			enyo.dispatch(e);
-			if (!tapPrevented && this.downEvent && this.downEvent.which == 1) {
+			if (!e._tapPrevented && this.downEvent && this.downEvent.which == 1) {
 				var target = this.findCommonAncestor(this.downEvent.target, evt.target);
 
 				// the common ancestor of the down/up events is the target of the tap
@@ -145,7 +152,9 @@
 					}
 				}
 			}
-			this.downEvent = null;
+			if (this.downEvent && this.downEvent.which == e.which) {
+				this.downEvent = null;
+			}
 		},
 
 		/**
@@ -293,15 +302,6 @@
 				}
 				c = c.parentNode;
 			}
-		},
-
-		/**
-		* Assigns {@link enyo.gesture.drag.holdPulseConfig} to {@link enyo.gesture}.
-		*
-		* @public
-		*/
-		configureHoldPulse: function(opts) {
-			enyo.mixin(enyo.gesture.drag.holdPulseConfig, opts);
 		}
 	};
 

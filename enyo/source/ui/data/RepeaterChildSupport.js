@@ -25,6 +25,17 @@
 		* @public
 		*/
 		selected: false,
+
+		/**
+		* Setting cachePoint: true ensures that events from the repeater child's subtree will
+		* always bubble up through the child, allowing the events to be decorated with repeater-
+		* related metadata and references.
+		*
+		* @type {Boolean}
+		* @default true
+		* @private
+		*/
+		cachePoint: true,
 		
 		/*
 		* @method
@@ -65,7 +76,7 @@
 		*/
 		_selectionHandler: function () {
 			if (this.repeater.selection && !this.get('disabled')) {
-				if (!this.repeater.groupSelection || !this.selected) {
+				if (this.repeater.selectionType != 'group' || !this.selected) {
 					this.set('selected', !this.selected);
 				}
 			}
@@ -93,6 +104,27 @@
 		*/
 		dispatchEvent: enyo.inherit(function (sup) {
 			return function (name, event, sender) {
+				var owner;
+				
+				// if the event is coming from a child of the repeater-child (this...) and has a
+				// delegate assigned to it there is a distinct possibility it is supposed to be
+				// targeting the instanceOwner of repeater-child not the repeater-child itself
+				// so we have to check this case and treat it as expected - if there is a handler
+				// and it returns true then we must skip the normal flow
+				if (event.originator !== this && event.delegate && event.delegate.owner === this) {
+					if (typeof this[name] != 'function') {
+						// ok we don't have the handler here let's see if our owner does
+						owner = this.getInstanceOwner();
+						if (owner && owner !== this) {
+							if (typeof owner[name] == 'function') {
+								// alright it appears that we're supposed to forward this to the
+								// next owner instead
+								return owner.dispatch(name, event, sender);
+							}
+						}
+					}
+				}
+				
 				if (!event._fromRepeaterChild) {
 					if (!!~enyo.indexOf(name, this.repeater.selectionEvents)) {
 						this._selectionHandler();

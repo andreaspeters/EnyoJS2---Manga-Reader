@@ -55,8 +55,20 @@
 			return function() {
 				sup.apply(this, arguments);
 				enyo.makeBubble(this.$.clientContainer, 'scroll');
+				if (this.translateOptimized) {
+					this.setStartPosition();
+				}
 			};
 		}),
+
+		/**
+		* @method
+		* @private
+		*/
+		setStartPosition: function() {
+			this.startX = this.getScrollLeft();
+			this.startY = this.getScrollTop();
+		},
 
 		/**
 		* @private
@@ -129,11 +141,19 @@
 		*/
 		setScrollLeft: enyo.inherit(function (sup) {
 			return function(inLeft) {
-				this.stop();
+				var m, p;
 				if (this.translateOptimized) {
-					var m = this.$.scrollMath;
+					p = this.scrollLeft;
+					m = this.$.scrollMath;
+					this.stop(true);
 					m.setScrollX(-inLeft);
 					m.stabilize();
+					if (p != -m.x) {
+						// We won't get a native scroll event,
+						// so need to make one ourselves
+						m.doScroll();
+						this.delayHideThumbs(100);
+					} 
 				} else {
 					sup.apply(this, arguments);
 				}
@@ -149,11 +169,19 @@
 		*/
 		setScrollTop: enyo.inherit(function (sup) {
 			return function(inTop) {
-				this.stop();
+				var m, p;
 				if (this.translateOptimized) {
-					var m = this.$.scrollMath;
+					p = this.scrollTop;
+					m = this.$.scrollMath;
+					this.stop(true);
 					m.setScrollY(-inTop);
 					m.stabilize();
+					if (p != -m.y) {
+						// We won't get a native scroll event,
+						// so need to make one ourselves
+						m.doScroll();
+						this.delayHideThumbs(100);
+					}
 				} else {
 					sup.apply(this, arguments);
 				}
@@ -185,18 +213,37 @@
 				return this._translated ? this.scrollTop : sup.apply(this, arguments);
 			};
 		}),
+
+		/**
+		* @method
+		* @private
+		*/
+		calcBoundaries: enyo.inherit(function (sup) {
+			return function() {
+				sup.apply(this, arguments);
+				if (this.translateOptimized && !this.isScrolling()) this.stabilize();
+			};
+		}),
+
+		/**
+		* @method
+		* @private
+		*/
+		handleResize: function() {
+			if (this.translateOptimized) {
+				this.stabilize();
+			}
+		},
 		
 		/**
 		* @method
 		* @private
 		*/
 		scrollMathStart: enyo.inherit(function (sup) {
-			return function(inSender) {
+			return function() {
 				sup.apply(this, arguments);
-				this.scrollStarting = true;
 				if (!this._translated) {
-					this.startX = this.getScrollLeft();
-					this.startY = this.getScrollTop();
+					this.setStartPosition();
 				}
 			};
 		}),
@@ -212,26 +259,47 @@
 				this.scrollLeft = -sender.x;
 				this.scrollTop = -sender.y;
 			}
-			if (this.isScrolling()) {
-				if (this.$.scrollMath.isScrolling()) {
-					this.effectScroll(this.startX - this.scrollLeft, this.startY - this.scrollTop);
-				}
-				if (this.thumb) {
-					this.updateThumbs();
-				}
+			this.effectScroll(this.scrollLeft, this.scrollTop);
+			if (this.thumb) {
+				this.showThumbs();
 			}
 		},
+
+		/**
+		* @private
+		*/
+		scrollMathStabilize: enyo.inherit(function (sup) {
+			return function (sender) {
+				if (this._translated) {
+					this.scrollLeft = -sender.x;
+					this.scrollTop = -sender.y;
+					this.effectScroll(-sender.x, -sender.y);
+					return true;
+				} else {
+					return sup.apply(this, arguments);
+				}
+			};
+		}),
 
 		/**
 		* While moving, scroller uses translate.
 		* 
 		* @private
 		*/
-		effectScroll: function (x, y) {
-			var o = x + 'px, ' + y + 'px' + (this.accel ? ',0' : '');
-			enyo.dom.transformValue(this.$.client, this.translation, o);
-			this._translated = true;
-		},
+		effectScroll: enyo.inherit(function (sup) {
+			return function (x, y) {
+				var o;
+				if (this.translateOptimized || this.isScrolling()) {
+					x = this.startX - x;
+					y = this.startY - y;
+					o = x + 'px, ' + y + 'px' + (this.accel ? ',0' : '');
+					enyo.dom.transformValue(this.$.client, this.translation, o);
+					this._translated = true;
+				} else {
+					sup.apply(this, arguments);
+				}
+			};
+		}),
 
 		/**
 		* When stopped, we use `scrollLeft/scrollTop` (makes cursor positioning automagic).
@@ -275,8 +343,7 @@
 				this.scrollNode.scrollTop = 1;
 				this.scrollNode.scrollTop = 0;
 			}
-		},
-		down: enyo.nop
+		}
 	});
 
 })(enyo, this);

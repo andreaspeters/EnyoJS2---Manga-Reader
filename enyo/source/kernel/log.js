@@ -11,7 +11,7 @@
 		/**
 		* The log level to use. Can be a value from -1 to 99, where -1 disables all
 		* logging, 0 is 'error', 10 is 'warn', and 20 is 'log'. It is preferred that
-		* this value be set using the [enyo.setLogLevel()]{@link enyo.setLogLevel}
+		* this value be set using the [enyo.setLogLevel()]{@link enyo~setLogLevel}
 		* method.
 		*
 		* @type {Number}
@@ -103,6 +103,7 @@
 	* Sets the log level to the given value. This will restrict the amount of output depending on
 	* the settings. The higher the value, the more output that will be allowed. The default is
 	* 99. The value, -1, would silence all logging, even 'error' (0).
+	* Without the 'see': {@link enyo.log}.
 	*
 	* @see enyo.logging.level
 	* @see enyo.log
@@ -157,7 +158,7 @@
 	* automatically.
 	*
 	* @utility
-	* @see [console.error]{@glossary console.error}
+	* @see {@glossary console.error}
 	* @param {...*} - The arguments to be logged.
 	* @public
 	*/

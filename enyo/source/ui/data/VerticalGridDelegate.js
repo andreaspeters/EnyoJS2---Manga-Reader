@@ -79,7 +79,7 @@
 		* @private
 		*/
 		pageWidth: function (list, page) {
-			var s  = list.boundsCache.width,
+			var s  = this.width(list),
 				n  = page.node || page.hasNode(),
 				mx = list.metrics.pages[page.index];
 			n.style.width = s + 'px';
@@ -104,8 +104,11 @@
 		*/
 		updateMetrics: function (list) {
 			this.updateBounds(list);
-			var bs = list.boundsCache,
-				w  = bs.width,
+			this.calculateMetrics(list);
+		},
+
+		calculateMetrics: function (list, width) {
+			var w  = (width === undefined) ? this.width(list) : width,
 				s  = list.spacing,
 				m  = list.minWidth,
 				h  = list.minHeight;
@@ -119,7 +122,7 @@
 			list.tileHeight = (h*(list.tileWidth/m));
 			// unfortunately this forces us to recalculate the number of controls that can
 			// be used for each page
-			this.controlsPerPage(list);
+			this.controlsPerPage(list, true);
 			// Compute first and last row index bounds
 			this.updateIndexBound(list);
 		},
@@ -152,7 +155,7 @@
 		*/
 		modelsAdded: enyo.inherit(function (sup) {
 			return function (list, props) {
-				this.updateIndexBound(list);
+				this.calculateMetrics(list);
 				sup.apply(this, arguments);
 			};
 		}),
@@ -166,31 +169,24 @@
 		*/
 		modelsRemoved: enyo.inherit(function (sup) {
 			return function (list, props) {
-				this.updateIndexBound(list);
+				this.calculateMetrics(list);
 				sup.apply(this, arguments);
 			};
 		}),
 
+
 		/**
-		* The number of [controls]{@link enyo.Control} necessary to fill a page. This will
-		* change depending on factors such as scaling and list-size adjustments. It is a 
-		* [function]{@glossary Function} of the calculated size required
-		* ([pageSizeMultiplier]{@link enyo.DataList#pageSizeMultiplier} * current boundary
-		* height) and the adjusted tile height and spacing.
+		* This method calculates the number of [controls]{@link enyo.Control} necessary to
+		* fill a page. It inherits from the same method in
+		* [verticalDelegate]{@link DataList.delegates.vertical} and extends it to reflect
+		* the number of columns in the grid list.
 		*
 		* @method
 		* @private
 		*/
-		controlsPerPage: enyo.inherit(function (sup) {
-			return function (list) {
-				var orig    = list._updatedControlsPerPage,
-					perPage = sup.apply(this, arguments);
-				if (orig != list._updatedControlsPerPage) {
-					// we need to adjust this value as it did not take into account
-					// the spacing or the columns
-					perPage = list.controlsPerPage = (perPage * list.columns);
-				}
-				return perPage;
+		calculateControlsPerPage: enyo.inherit(function (sup) {
+			return function(list) {
+				return sup.apply(this, arguments) * list.columns;
 			};
 		}),
 
@@ -261,6 +257,7 @@
 				list.bufferSize = bs;
 				n.style[sp] = bs + 'px';
 				n.style[ss] = this[ss](list) + 'px';
+				list.$.scroller.remeasure();
 			}
 		},
 		

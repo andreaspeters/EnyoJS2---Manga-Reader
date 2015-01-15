@@ -1,7 +1,8 @@
 {
 	"id": "biz.aventer.mreader",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"vendor": "avEnter",
+	"vendorurl": "http://www.aventer.biz",
 	"type": "web",
 	"main": "index.html",
 	"title": "Manga Reader",

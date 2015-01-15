@@ -64,7 +64,7 @@
 	* this kind.
 	*
 	* For more information, see the documentation on
-	* [Controls]{@linkplain docs/key-concepts/controls.html} in the
+	* [Controls]{@linkplain $dev-guide/key-concepts/controls.html} in the
 	* Enyo Developer Guide.
 	*
 	* **If you make changes to `enyo.Control`, be sure to add or update the
@@ -587,6 +587,19 @@
 				style = this.style,
 				delegate = this.renderDelegate || Control.renderDelegate;
 
+			// FIXME: This is put in place for a Firefox bug where setting a style value of a node 
+			// via its CSSStyleDeclaration object (by accessing its node.style property) does
+			// not work when using a CSS property name that contains one or more dash, and requires 
+			// setting the property via the JavaScript-style property name. This fix should be 
+			// removed once this issue has been resolved in the Firefox mainline and its variants
+			// (it is currently resolved in the 36.0a1 nightly):
+			// https://bugzilla.mozilla.org/show_bug.cgi?id=1083457
+			if (node && (enyo.platform.firefox < 35 || enyo.platform.firefoxOS || enyo.platform.androidFirefox)) {
+				prop = prop.replace(/-([a-z])/gi, function(match, submatch) {
+					return submatch.toUpperCase();
+				});
+			}
+
 			if (value !== null && value !== '' && value !== undefined) {
 				// update our current cached value
 				if (node) {
@@ -622,7 +635,8 @@
 						// This looks a lot worse than it is. The complexity stems from needing to
 						// match a url container that can have other characters including semi-
 						// colon and also that the last property may/may-not end with one
-						'\\s*' + prop + '\\s*:\\s*[a-zA-Z0-9\\ ()_\\-\'"%,]*(?:url\\(.*\\)\\s*[a-zA-Z0-9\\ ()_\\-\'"%,]*)?\\s*(?:;|;?$)'
+						'\\s*' + prop + '\\s*:\\s*[a-zA-Z0-9\\ ()_\\-\'"%,]*(?:url\\(.*\\)\\s*[a-zA-Z0-9\\ ()_\\-\'"%,]*)?\\s*(?:;|;?$)',
+						'gi'
 					),'');
 					this.set('style', style);
 				}
@@ -732,21 +746,23 @@
 		* @private
 		*/
 		showingChanged: function (was) {
-
 			// if we are changing from not showing to showing we attempt to find whatever
 			// our last known value for display was or use the default
-			if (!was && this.showing) this.applyStyle('display', this._display || '');
+			if (!was && this.showing) {
+				this.applyStyle('display', this._display || '');
+				this.sendShowingChangedEvent(was);
+			}
 
 			// if we are supposed to be hiding the control then we need to cache our current
 			// display state
 			else if (was && !this.showing) {
+				this.sendShowingChangedEvent(was);
 				// we can't truly cache this because it _could_ potentially be set to multiple
 				// values throughout its lifecycle although that seems highly unlikely...
 				this._display = this.hasNode() ? this.node.style.display : '';
 				this.applyStyle('display', 'none');
 			}
 
-			this.sendShowingChangedEvent(was);
 		},
 
 		/**
@@ -794,7 +810,7 @@
 		},
 
 		/**
-		* Handles the `onshowingchanged` event that is waterfalled by controls when
+		* Handles the `onShowingChanged` event that is waterfalled by controls when
 		* their `showing` value is modified. If the control is not showing itself
 		* already, it will not continue the waterfall. Overload this method to
 		* provide additional handling for this event.
@@ -925,10 +941,12 @@
 		* target `parentNode`.
 		*
 		* @param {Node} parentNode - The new parent of this control.
+		* @param {Boolean} preventRooting - If `true`, this control will not be treated as a root 
+		*	view and will not be added to the set of roots.
 		* @returns {this} The callee for chaining.
 		* @public
 		*/
-		renderInto: function (parentNode) {
+		renderInto: function (parentNode, preventRooting) {
 			var delegate = this.renderDelegate || Control.renderDelegate,
 				noFit = this.fit === false;
 
@@ -953,7 +971,9 @@
 
 			// we inject this as a root view because, well, apparently that is just an assumption
 			// we've been making...
-			enyo.addToRoots(this);
+			if (!preventRooting) {
+				enyo.addToRoots(this);
+			}
 
 			// now let the delegate render it the way it needs to
 			delegate.renderInto(this, parentNode);
@@ -1275,8 +1295,8 @@
 			// Values that are null or undefined, or are numbers, arrays, and some objects are safe
 			// to be tested.
 			var str = (arguments.length) ? stringInstead : this.content;
-			this.rtl = enyo.isRtl(str);
 			if (str || str === 0) {
+				this.rtl = enyo.isRtl(str);
 				this.applyStyle('direction', this.rtl ? 'rtl' : 'ltr');
 			} else {
 				this.applyStyle('direction', null);

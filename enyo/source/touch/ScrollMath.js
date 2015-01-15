@@ -89,7 +89,8 @@
 		events: {
 			onScrollStart: '',
 			onScroll: '',
-			onScrollStop: ''
+			onScrollStop: '',
+			onStabilize: ''
 		},
 
 		/**
@@ -351,6 +352,7 @@
 				if (this.dragging) {
 					this.y0 = this.y = this.uy;
 					this.x0 = this.x = this.ux;
+					this.endX = this.endY = null;
 				}
 				// frame-time accumulator
 				// min acceptable time is 16ms (60fps)
@@ -368,7 +370,6 @@
 				t = this.simulate(t);
 				// scroll if we have moved, otherwise the animation is stalled and we can stop
 				if (y0 != this.y || x0 != this.x) {
-					//this.log(this.y, y0);
 					this.scroll();
 				} else if (!this.dragging) {
 					// set final values
@@ -425,13 +426,13 @@
 		* @private
 		*/
 		stabilize: function () {
-			this.start();
 			var y = Math.min(this.topBoundary, Math.max(this.bottomBoundary, this.y));
 			var x = Math.min(this.leftBoundary, Math.max(this.rightBoundary, this.x));
-			this.y = this.y0 = y;
-			this.x = this.x0 = x;
-			this.scroll();
-			this.stop(true);
+			if (y != this.y || x != this.x) {
+				this.y = this.y0 = y;
+				this.x = this.x0 = x;
+				this.doStabilize();
+			}
 		},
 
 		/**
@@ -519,8 +520,8 @@
 				this.x = this.x0 = this.x0 + dx;
 				shouldScroll = true;
 			}
+			this.stop(!shouldScroll);
 			if (shouldScroll) {
-				this.stop(true);
 				this.start();
 				return true;
 			}
