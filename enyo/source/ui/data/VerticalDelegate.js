@@ -9,7 +9,7 @@
 	* @private
 	*/
 	enyo.DataList.delegates.vertical = {
-		
+
 		/**
 		* Used to determine the minimum size of the page. The page size will be at least this
 		* number of times greater than the viewport size.
@@ -43,7 +43,7 @@
 				list._staticControlsPerPage = true;
 			}
 		},
-		
+
 		/**
 		* @private
 		*/
@@ -72,12 +72,12 @@
 			// be (left/top)
 			this.scrollTo(list, 0, 0);
 		},
-		
+
 		/**
 		* Retrieves [list]{@link enyo.DataList} pages, indexed by their position.
 		*
 		* @param {enyo.DataList} list - The [list]{@link enyo.DataList} to perform this action on.
-		* @returns {Object} Returns a [hash]{@glossary Object} of the pages marked by their 
+		* @returns {Object} Returns a [hash]{@glossary Object} of the pages marked by their
 		*	position as either 'firstPage' or 'lastPage'.
 		* @private
 		*/
@@ -86,17 +86,17 @@
 				pos         = list.pagePositions || (list.pagePositions={}),
 				upperProp   = list.upperProp,
 				firstIndex  = list.$.page1.index || 0,
-				secondIndex = list.$.page2.index || 1;
+				secondIndex = (list.$.page2.index || list.$.page2.index === 0) ? list.$.page2.index : 1;
 			pos.firstPage   = (
 				metrics[firstIndex] && metrics[secondIndex] &&
 				(metrics[secondIndex][upperProp] < metrics[firstIndex][upperProp])
 				? list.$.page2
-				: list.$.page1			
+				: list.$.page1
 			);
 			pos.lastPage = (pos.firstPage === list.$.page1? list.$.page2: list.$.page1);
 			return pos;
 		},
-		
+
 		/**
 		* Refreshes each page in the given [list]{@link enyo.DataList}, adjusting its position
 		* and adjusting the buffer accordingly.
@@ -109,7 +109,7 @@
 			this.assignPageIndices(list);
 			this.generate(list);
 		},
-		
+
 		/**
 		* Once the [list]{@link enyo.DataList} is initially rendered, it will generate its
 		* [scroller]{@link enyo.Scroller} (so we know that is available). Now we need to
@@ -128,6 +128,8 @@
 			// get our initial sizing cached now since we should actually have
 			// bounds at this point
 			this.updateBounds(list);
+			// calc offset of pages to scroller client
+			this.calcScrollOffset(list);
 			// now if we already have a length then that implies we have a controller
 			// and that we have data to render at this point, otherwise we don't
 			// want to do any more initialization
@@ -139,6 +141,11 @@
 		* @private
 		*/
 		generatePage: function (list, page, index) {
+			// Temporarily add logging code to make it easier for
+			// QA and others to detect and report page-index issues
+			if (index < 0) {
+				enyo.warn('Invalid page index: ' + index);
+			}
 			// in case it hasn't been set we ensure it is marked correctly
 			page.index  = index;
 				// the collection of data with records to use
@@ -149,12 +156,12 @@
 				perPage = this.controlsPerPage(list),
 				// placeholder for the control we're going to update
 				view;
-			
+
 			// the first index for this generated page
 			page.start  = perPage * index;
 			// the last index for this generated page
 			page.end    = Math.min((data.length - 1), (page.start + perPage) - 1);
-			
+
 			// if generating a control we need to use the correct page as the control parent
 			list.controlParent = page;
 			for (var i=page.start; i <= page.end && i < data.length; ++i) {
@@ -196,7 +203,7 @@
 			var s = list.selectionProperty;
 			if (s && view.model.get(s) && !list.isSelected(view.model)) {
 				list.select(view.index);
-				// don't have to check opposite case (model is false and isSelected is true) 
+				// don't have to check opposite case (model is false and isSelected is true)
 				// because that shouldn't happen
 			}
 		},
@@ -236,10 +243,10 @@
 			// using height/width of the available viewport times our multiplier value
 			return Math.ceil(((fn.call(this, list) * multi) / childSize) + 1);
 		},
-		
+
 		/**
 		* When necessary, updates the the value of `controlsPerPage` dynamically to ensure that
-		* the page size is always larger than the viewport size. Note that once a 
+		* the page size is always larger than the viewport size. Note that once a
 		* [control]{@link enyo.Control} is instanced (if this number increases and then decreases),
 		* the number of available controls will be used instead. This method updates the
 		* [childSize]{@link enyo.DataList#childSize} and is used internally to calculate other
@@ -264,7 +271,7 @@
 				return perPage;
 			}
 		},
-		
+
 		/**
 		* Retrieves the page index for the given record index.
 		*
@@ -287,7 +294,7 @@
 		scrollToControl: function (list, control) {
 			list.$.scroller.scrollToControl(control);
 		},
-		
+
 		/**
 		* An indirect interface to the list's scroller's scrollTo()
 		* method. We provide this to create looser coupling between the
@@ -300,7 +307,7 @@
 		scrollTo: function (list, x, y) {
 			list.$.scroller.scrollTo(x, y);
 		},
-		
+
 		/**
 		* Attempts to scroll to the given index.
 		*
@@ -333,7 +340,7 @@
 
 		/**
 		* Returns the calculated height for the given page.
-		* 
+		*
 		* @private
 		*/
 		pageHeight: function (list, page) {
@@ -347,7 +354,7 @@
 			}
 			return h;
 		},
-		
+
 		/**
 		* Returns the calculated width for the given page.
 		*
@@ -364,22 +371,22 @@
 			}
 			return w;
 		},
-		
+
 		/**
-		* Attempts to intelligently decide when to force updates for [models]{@link enyo.Model} 
+		* Attempts to intelligently decide when to force updates for [models]{@link enyo.Model}
 		* being added, if the models are part of any visible pages. For now, an assumption is
 		* made that records being added are ordered and sequential.
 		*
 		* @private
 		*/
 		modelsAdded: function (list, props) {
-			
+
 			// if the list has not already reset, reset
 			if (!list.hasReset) return this.reset(list);
-			
+
 			var cpp = this.controlsPerPage(list),
 				end = Math.max(list.$.page1.start, list.$.page2.start) + cpp;
-									
+
 			// note that this will refresh the following scenarios
 			// 1. if the dataset was spliced in above the current indices and the last index added was
 			//    less than the first index rendered
@@ -390,24 +397,45 @@
 			// 4. if the dataset was spliced inside the current indices (pushing some down)
 			// 5. if the dataset was appended to the current dataset and was inside the indices that
 			//    should be currently rendered (there was a partially filled page)
-			
+
 			// the only time we don't refresh is if the first index of the contiguous set of added
 			// models is beyond our final rendered page (possible) indices
 
-			// in the case where it does not need to refresh the existing controls it will update its
-			// measurements and page positions within the buffer so scrolling can continue properly
+			// in the case where it does not need to refresh the existing controls except the last page
+			// if the last page is not fully filled, it will be filled with added models
+			// so we should generate the last page.
+
+			// it will update its measurements and page positions within the buffer
+			// so scrolling can continue properly
 
 			// if we need to refresh, do it now and ensure that we're properly setup to scroll
 			// if we were adding to a partially filled page
-			if (props.index <= end ) this.refresh(list);						
-			else {				
+			if (props.index <= end ) this.refresh(list);
+			else {
+				// we should confirm that the page which new models are added is need to update list.metrics
+				var lastPageIndex = this.pageForIndex(list, props.index),
+					// the last page before model added
+					lastPage = list.metrics.pages[lastPageIndex],
+					sp = list.psizeProp,
+					// current page count after models added
+					pc = this.pageCount(list),
+					pageSize;
+
+				// if there is more pages after lastPage, the lastPage metric needs to be updated
+				if (lastPageIndex < pc) {
+					pageSize = this.defaultPageSize(list);
+					if (lastPage[sp] < pageSize) {
+						lastPage[sp] = pageSize;
+					}
+				}
+
 				// we still need to ensure that the metrics are updated so it knows it can scroll
 				// past the boundaries of the current pages (potentially)
 				this.adjustBuffer(list);
 				this.adjustPagePositions(list);
 			}
 		},
-		
+
 		/**
 		* Attempts to find the [control]{@link enyo.Control} for the requested index.
 		*
@@ -426,7 +454,7 @@
 				}
 			}
 		},
-		
+
 		/**
 		* Attempts to intelligently decide when to force updates for [models]{@link enyo.Model}
 		* being removed, if the models are part of any visible pages.
@@ -434,20 +462,20 @@
 		* @private
 		*/
 		modelsRemoved: function (list, props) {
-			
+
 			// if the list has not already reset, reset
 			if (!list.hasReset) return this.reset(list);
-			
+
 			var pg1 = list.$.page1,
 				pg2 = list.$.page2,
 				lastIdx = Math.max(pg1.end, pg2.end);
-			
-			// props.models is removed modelList and the lowest index among removed models	
+
+			// props.models is removed modelList and the lowest index among removed models
 			if (props.models.low <= lastIdx) {
-				this.refresh(list);				
+				this.refresh(list);
 			}
 		},
-		
+
 		/**
 		* Recalculates the buffer size based on the current metrics for the given list. This
 		* may not be completely accurate until the final page is scrolled into view.
@@ -472,7 +500,7 @@
 				list.$.scroller.remeasure();
 			}
 		},
-		
+
 		/**
 		* Ensures that the pages are positioned according to their calculated positions,
 		* updating if necessary.
@@ -631,7 +659,7 @@
 			if (typeof targetPos == 'undefined') {
 				targetPos = currentPos;
 			}
-			
+
 			// Make sure the target position is in-bounds
 			targetPos = Math.max(0, Math.min(targetPos, list.bufferSize));
 
@@ -660,7 +688,7 @@
 				// If target page is the last page, there is no following page -- so we choose
 				// the preceding page.
 				(index1 === last) ? index1 - 1 :
-				// In all other cases, we pick a page using our previously determined bias.  
+				// In all other cases, we pick a page using our previously determined bias.
 				index1 + bias;
 
 			list.$.page1.index = index1;
@@ -778,6 +806,164 @@
 			list.boundsCache    = list.getBounds();
 			list._updatedBounds = enyo.perfNow();
 			list._updateBounds  = false;
+		},
+
+		/**
+		* Returns the `start` and `end` indices of the visible controls. Partially visible controls
+		* are included if the amount visible exceeds the {@link enyo.DataList#visibleThreshold}.
+		*
+		* @private
+		*/
+		getVisibleControlRange: function (list) {
+			var ret = {
+					start: -1,
+					end: -1
+				},
+				posProp = list.posProp,
+				sizeProp = list.psizeProp,
+				size = this[sizeProp](list),
+				scrollPosition = this.getScrollPosition(list),
+				pages = list.pages.slice(0).sort(function (a, b) {
+					return a.start - b.start;
+				}),
+				i = 0,
+				max = list.collection? list.collection.length - 1 : 0,
+				cpp = list.controlsPerPage,
+				adjustedScrollPosition, p, bounds, ratio;
+
+			// find the first showing page and estimate the start and end indices
+			while ((p = pages[i++])) {
+				bounds = p.getBounds();
+				bounds.right = list.bufferSize - bounds.left - bounds.width;
+
+				adjustedScrollPosition = scrollPosition - list.scrollPositionOffset;
+
+				if (scrollPosition >= bounds[posProp] && scrollPosition < bounds[posProp] + bounds[sizeProp]) {
+					ratio = cpp/bounds[sizeProp];
+					ret.start = Math.min(max, Math.max(0, Math.round((adjustedScrollPosition - bounds[posProp])*ratio) + p.start));
+					ret.end = Math.min(max, Math.round(size*ratio) + ret.start);
+					break;
+				}
+			}
+
+			ret.start = this.adjustIndex(list, ret.start, p, bounds, adjustedScrollPosition, true);
+			ret.end = Math.max(ret.start, this.adjustIndex(list, ret.end, p, bounds, adjustedScrollPosition + size, false));
+
+			return ret;
+		},
+
+		/**
+		* Calculates the scroll position offset to account for the dimensions of any controls that
+		* are within the scroller but precede the pages.
+		*
+		* @param  {enyo.DataList} list            The instance of enyo.DataList
+		* @private
+		*/
+		calcScrollOffset: function (list) {
+			var wrapper = list.pages[0].parent.hasNode(),
+				scroller = list.$.scroller.hasNode(),
+				posProp = list.posProp,
+				position;
+
+			// these should always be truthy in production scenarios but since the nodes aren't
+			// actually rendered in mocha, the tests fail so guarding against that.
+			if (wrapper && scroller) {
+				position = enyo.dom.calcNodePosition(wrapper, scroller);
+				list.scrollPositionOffset = position[posProp];
+			} else {
+				list.scrollPositionOffset = 0;
+			}
+		},
+
+		/**
+		* Refines an estimated `index` to a precise index by evaluating the bounds of the control at
+		* the estimated `index` against the visible area and adjusting it up or down based on the
+		* actual bounds and the `list`'s {@link enyo.DataList#visibleThreshold}.
+		*
+		* @param {enyo.DataList} list
+		* @param {Number}        index           Estimated index
+		* @param {enyo.Control}  page            Page control containing control at `index`
+		* @param {Object}        pageBounds      Bounds of `page`
+		* @param {Number}        scrollBoundary  Edge of visible area (top, bottom, left, or right)
+		* @param {Boolean}       start           `true` for start of boundary (top, right), `false`
+		*   for end
+		* @private
+		*/
+		adjustIndex: function (list, index, page, pageBounds, scrollBoundary, start) {
+			var dir = start? -1 : 1,
+				posProp = list.posProp,
+				sizeProp  = list.psizeProp,
+				max = list.collection? list.collection.length - 1 : 0,
+				last, control, bounds,
+
+				// edge of control
+				edge,
+
+				// distance from edge of control to scroll boundary
+				dEdge,
+
+				// distance from visible threshold to scroll boundary
+				dThresh;
+
+			do {
+				control = list.getChildForIndex(index);
+
+				// if index is on a boundary (other than 0) and the control is fully visible, the
+				// control at index may not exist if the buffer page hasn't shifted to cover this
+				// index range yet. If that's the case, revert to our previous index and stop.
+				if (!control) {
+					index = last;
+					break;
+				}
+
+				// account for crossing page boundaries
+				if (control.parent != page) {
+					page = control.parent;
+					pageBounds = page.getBounds();
+				}
+
+				bounds = control.getBounds();
+				bounds.right = pageBounds.width - bounds.left - bounds.width;
+
+				edge = bounds[posProp] + pageBounds[posProp] + (start? 0 : bounds[sizeProp]);
+				dEdge = edge - scrollBoundary;
+				dThresh = dEdge - dir*bounds[sizeProp]*(1-list.visibleThreshold)	;
+
+				if ((start && dEdge > 0) || (!start && dEdge < 0)) {
+					// control is fully visible
+					if (last !== index + dir) {
+						last = index;
+						index += dir;
+					} else {
+						// if this control is fully visible but the last was too obscured, use this
+						break;
+					}
+				} else if ((start && dThresh >= 0) || (!start && dThresh <= 0)) {
+					// control is partially obscured but enough is visible
+					break;
+				} else {
+					// control is too obscured
+					if (last !== index - dir) {
+						last = index;
+						index -= dir;
+					} else {
+						// use the last since this is too obscured
+						index = last;
+						break;
+					}
+				}
+
+				// guard against selecting an index that is out of bounds
+				if (index < 0) {
+					index = 0;
+					break;
+				} else if (index > max) {
+					index = max;
+					break;
+				}
+			} while (true);
+
+			return index;
 		}
 	};
 

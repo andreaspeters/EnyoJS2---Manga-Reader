@@ -1,6 +1,7 @@
 enyo.kind({
 	name: "MyApps.MangaView",
 	kind: "FittableRows",
+	classes: "enyo-git",
 	mainMenuPanelsCount: 0,
 	config: {'server': "www.mangaeden.com", 'lastmanga': "", 'lastchapter': ""},
 	menu: [],
@@ -15,13 +16,15 @@ enyo.kind({
 				]}
 			]},
 			{kind:"FittableRows", components: [
-				{kind: "FittableColumns", name: "manga"},
-				{name:"mangaContent", kind:"ImageCarousel", fit:true, onload:"showMangaChapter"},
-				{kind: "onyx.Toolbar", style:"text-align:center;", components: [
+				{name: "mangaContent", kind:"ImageCarousel", fit:true, onload:"showMangaChapter"},
+				{kind: "FittableColumns", fit: true, name: "manga"},
+				{name: "toolBar", kind: "onyx.Toolbar", style:"text-align:center;", components: [
 					{kind: "onyx.MenuDecorator", onSelect: "selectChapter", components: [
 						{content: "Chapter"},
 						{kind: "onyx.Menu", name: "mangaChapter"}
-					]}
+					]},
+					{kind: 'onyx.Button', content:'&larr;', allowHtml: true, ontap:'previous'},
+					{kind: 'onyx.Button', content:'&rarr;', allowHtml: true, ontap:'next'}
 				]}
 			]}
 		]}
@@ -56,7 +59,7 @@ enyo.kind({
 						{name: "description", content: this.chapterList.description}
 					]}
 			], {owner: this.$.manga});
-		this.$.manga.setStyle("height: 90%");
+		this.$.manga.setStyle("height: 94%");
 		this.$.mangaContent.setStyle("height: 0px");
 		this.$.manga.render();
 		this.$.manga.reflow();
@@ -74,6 +77,7 @@ enyo.kind({
 			this.$.mangaChapter.createComponent([{content:this.chapterList.chapters[i][0]}], {owner: this.$.mangaChapter});
 		}
 
+
 		this.$.mangaChapter.render();
 		this.$.mangaChapter.reflow();
 	},
@@ -88,14 +92,16 @@ enyo.kind({
 			mangaImages[x] = "http://cdn.mangaeden.com/mangasimg/"+this.chapter.images[i][1];
 			x++;
 		}
-		this.$.mangaContent.setImages(mangaImages)
+		this.$.mangaContent.setImages(mangaImages);
+		this.$.mangaContent.setIndex(0);
+
 	},
 
 	// Kapitel Auswaehlen
 	selectChapter: function(inSender, inEvent) {
 		this.$.manga.destroyComponents();
 		this.$.manga.setStyle("height: 0px;");
-		this.$.mangaContent.setStyle("height: 90%; background:url(assets/bg.png)");
+		this.$.mangaContent.setStyle("height: 94%; background:url(assets/bg.png)");
 		var length = this.chapterList.chapters.length;
 		this.currentChapterIndex = 0;
 		for (var i = 0; i < length; i++) {
@@ -140,6 +146,16 @@ enyo.kind({
 			this.$.mainMenuPanels.setIndex(1);
 		}
 
+	},
+
+	previous: function(inSender, inEvent) {
+		this.$.mangaContent.previous();
+		this.$.mangaContent.reflow();
+	},
+
+	next: function(inSender, inEvent) {
+		this.$.mangaContent.next();
+		this.$.mangaContent.reflow();
 	},
 
 });
