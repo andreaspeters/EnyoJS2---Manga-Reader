@@ -6,13 +6,18 @@ enyo.kind({
 	config: {'server': "www.mangaeden.com", 'lastmanga': "", 'lastchapter': ""},
 	menu: [],
 	index: 0,
+	page: 0,
 	components:[
-		{kind: "Panels", name: "mainMenuPanels", arrangerKind: "CardArranger",fit: true, style: "background: url(assets/bg.jpg);", components: [
+		{kind: "Panels", name: "mainMenuPanels", arrangerKind: "CardArranger",fit: true, style: "background: url(assets/bg.png);", components: [
 			{kind:"FittableRows", components: [
-				{kind: "enyo.List", name: "mangaList", fit: true, onSetupItem: "setupMangaList", components: [	
+				{kind: "enyo.List", name: "mangaList", fit: true, onSetupItem: "setupMangaList", touch: true, components: [	
 					{class: "item", name: "item", components: [
 						{kind: "Image", name: "mangaPreview", style: "width:100px"},
-						{name: "mangaName"}
+						{name: "mangaName"},
+						{name: "mangaTags"}
+					]},
+					{name: "more", style: "background-color: #323232;", components: [
+						{kind: "onyx.Button", content: "more", classes: "onyx-dark", style: "visibility:hidden", ontap: "moreMangas"}
 					]}
 				]}
 			]},
@@ -68,7 +73,7 @@ enyo.kind({
 			
 					]}
 			], {owner: this.$.manga});
-		this.$.manga.setStyle("height: 94%");
+		this.$.manga.setStyle("height: 93%");
 		this.$.mangaContent.setStyle("height: 0px");
 		this.$.manga.render();
 		this.$.manga.reflow();
@@ -112,7 +117,7 @@ enyo.kind({
 	selectChapter: function(inSender, inEvent) {
 		this.$.manga.destroyComponents();
 		this.$.manga.setStyle("height: 0px;");
-		this.$.mangaContent.setStyle("height: 94%; background:url(assets/bg.png)");
+		this.$.mangaContent.setStyle("height: 93%; background:url(assets/bg.png)");
 		var length = this.chapterList.chapters.length;
 		this.currentChapterIndex = 0;
 		for (var i = 0; i < length; i++) {
@@ -130,6 +135,7 @@ enyo.kind({
 	// Uebersicht ueber alle Mangas
 	setupMangaList: function(inSender, inEvent) {
 		this.$.mangaName.setContent(this.manga[inEvent.index].t);
+		this.$.mangaTags.setContent(this.manga[inEvent.index].c);
 		if (this.manga[inEvent.index].im) {
 			this.$.mangaPreview.setSrc("http://cdn.mangaeden.com/mangasimg/"+this.manga[inEvent.index].im);
 		}
@@ -147,7 +153,7 @@ enyo.kind({
 	},
 
 	rendered: function() {
-		this.jsonCall("/list/0/", enyo.bind(this,"successGetList"), enyo.bind(this,"errorML"));
+		this.jsonCall("/list/0/?p=0", enyo.bind(this,"successGetList"), enyo.bind(this,"errorML"));
 
 		try {
             this.config['lastmanga'] = localStorage.getItem("lastmanga");
@@ -179,6 +185,11 @@ enyo.kind({
 
 	onBack: function(inSender, inEvent) {
 		this.$.mainMenuPanels.setIndex(0);
+	},
+
+	moreMangas: function() {
+		this.page++;
+		this.jsonCall("/list/0/?p="+this.page, enyo.bind(this,"successGetList"), enyo.bind(this,"errorML"));
 	},
 
 });

@@ -7,7 +7,6 @@ enyo.kind({
 	components:[
 		{kind: "enyo.Panels", fit: true, arrangerKind: "CollapsingArranger", components: [
 			{kind: "MyApps.MangaView", name:"productPanel", fit: true, realtimeFit: true},
-			{name: "productsView"}
 		]}
 	]
 
