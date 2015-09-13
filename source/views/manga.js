@@ -5,6 +5,7 @@ enyo.kind({
 	mainMenuPanelsCount: 0,
 	config: {'server': "www.mangaeden.com", 'lastmanga': "", 'lastchapter': ""},
 	menu: [],
+	index: 0,
 	components:[
 		{kind: "Panels", name: "mainMenuPanels", arrangerKind: "CardArranger",fit: true, style: "background: url(assets/bg.jpg);", components: [
 			{kind:"FittableRows", components: [
@@ -18,13 +19,15 @@ enyo.kind({
 			{kind:"FittableRows", components: [
 				{name: "mangaContent", kind:"ImageCarousel", fit:true, onload:"showMangaChapter"},
 				{kind: "FittableColumns", fit: true, name: "manga"},
-				{name: "toolBar", kind: "onyx.Toolbar", style:"text-align:center;", components: [
+				{name: "toolBar", kind: "onyx.Toolbar", components: [
+					{name: "backButton", kind: 'onyx.Button', content:'BACK', allowHtml: true, ontap:'onBack'},
 					{kind: "onyx.MenuDecorator", onSelect: "selectChapter", components: [
 						{content: "Chapter"},
 						{kind: "onyx.Menu", name: "mangaChapter"}
 					]},
-					{kind: 'onyx.Button', content:'&larr;', allowHtml: true, ontap:'previous'},
-					{kind: 'onyx.Button', content:'&rarr;', allowHtml: true, ontap:'next'}
+					{name: "prevButton", kind: 'onyx.Button', content:'&larr;', allowHtml: true, ontap:'previous'},
+					{name: "nextButton", kind: 'onyx.Button', content:'&rarr;', allowHtml: true, ontap:'next'},
+					{name: 'mangaIndex', content: "0"}
 				]}
 			]}
 		]}
@@ -50,13 +53,19 @@ enyo.kind({
 
 	// Alle Kapitel eines Mangas Laden
 	successGetChapterList: function(inSender, inResponse) {
+		this.$.nextButton.hide();
+		this.$.prevButton.hide();
+		this.$.mangaIndex.hide();
 		this.chapterList = inResponse;
 		this.$.manga.destroyComponents();
 		this.$.manga.createComponents([
-					{kind: "Image", src: "http://cdn.mangaeden.com/mangasimg/"+this.chapterList.image},
+					{kind: "Image", sizing:"constrain", style:"width:50%", src: "http://cdn.mangaeden.com/mangasimg/"+this.chapterList.image},
 					{kind: "FittableRows", components: [
 						{name: "title", content: this.chapterList.title},
-						{name: "description", content: this.chapterList.description}
+						{name: "description", content: this.chapterList.description},
+						{name: "author", content: "Author: "+this.chapterList.author},
+						{name: "tags", content: "Tags: "+this.chapterList.categories},
+			
 					]}
 			], {owner: this.$.manga});
 		this.$.manga.setStyle("height: 94%");
@@ -94,7 +103,9 @@ enyo.kind({
 		}
 		this.$.mangaContent.setImages(mangaImages);
 		this.$.mangaContent.setIndex(0);
-
+		this.$.nextButton.show();
+		this.$.prevButton.show();
+		this.$.mangaIndex.show();
 	},
 
 	// Kapitel Auswaehlen
@@ -111,6 +122,8 @@ enyo.kind({
 			}	
 		} 
 		this.jsonCall("/chapter/"+this.chapterList.chapters[this.currentChapter][3], enyo.bind(this,"successGetChapter"), enyo.bind(this, "errorML"));
+		this.index = 0;
+		this.$.mangaIndex.setContent(this.index);
 	},
 
 
@@ -149,13 +162,23 @@ enyo.kind({
 	},
 
 	previous: function(inSender, inEvent) {
-		this.$.mangaContent.previous();
-		this.$.mangaContent.reflow();
+		if (this.index >= 0) {
+			this.index--;
+			this.$.mangaContent.previous();
+			this.$.mangaContent.reflow();
+			this.$.mangaIndex.setContent(this.index);
+		}
 	},
 
 	next: function(inSender, inEvent) {
+		this.index++;
 		this.$.mangaContent.next();
 		this.$.mangaContent.reflow();
+		this.$.mangaIndex.setContent(this.index);
+	},
+
+	onBack: function(inSender, inEvent) {
+		this.$.mainMenuPanels.setIndex(0);
 	},
 
 });

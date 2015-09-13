@@ -6,7 +6,7 @@ enyo.kind({
 	authtoken: "",
 	components:[
 		{kind: "enyo.Panels", fit: true, arrangerKind: "CollapsingArranger", components: [
-			{kind: "MyApps.MangaView", name:"productPanel", fit: true, realtimeFit: true, style: "min-width: 300px"},
+			{kind: "MyApps.MangaView", name:"productPanel", fit: true, realtimeFit: true},
 			{name: "productsView"}
 		]}
 	]

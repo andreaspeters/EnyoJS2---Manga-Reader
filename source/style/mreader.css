@@ -31,6 +31,24 @@ div[id ^= "app_mainView_productPanel_manga_description"] {
 	margin-left: 50px;
 	font-size: 13px;
 	width: 50%;
+	padding-bottom: 20px;
+}
+
+div[id ^= "app_mainView_productPanel_manga_tags"] {
+	margin-left: 50px;
+	font-size: 13px;
+	width: 50%;
+}
+
+div[id ^= "app_mainView_productPanel_manga_author"] {
+	margin-left: 50px;
+	font-size: 13px;
+	width: 50%;
+}
+
+div[id ^= "app_mainView_productPanel_mangaIndex"] {
+	float: right;
+	font-size: 13px;
 }
 
 
