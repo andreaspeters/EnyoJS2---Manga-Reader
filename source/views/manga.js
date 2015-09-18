@@ -169,7 +169,7 @@ enyo.kind({
 	},
 
 	previous: function(inSender, inEvent) {
-		if (this.index >= 0) {
+		if (this.index > 0) {
 			this.index--;
 			this.$.mangaContent.previous();
 			this.$.mangaContent.reflow();
@@ -192,5 +192,6 @@ enyo.kind({
 		this.page++;
 		this.jsonCall("/list/0/?p="+this.page, enyo.bind(this,"successGetList"), enyo.bind(this,"errorML"));
 	},
+
 
 });
