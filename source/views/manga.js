@@ -22,7 +22,7 @@ enyo.kind({
 				]}
 			]},
 			{kind:"FittableRows", components: [
-				{name: "mangaContent", kind:"ImageCarousel", fit:true, onload:"showMangaChapter"},
+				{name: "mangaContent", kind:"ImageCarousel", fit:true, lowMemory:true, onload:"showMangaChapter"},
 				{kind: "FittableColumns", fit: true, name: "manga"},
 				{name: "toolBar", kind: "onyx.Toolbar", components: [
 					{name: "backButton", kind: 'onyx.Button', content:'BACK', allowHtml: true, ontap:'onBack'},
@@ -64,7 +64,7 @@ enyo.kind({
 		this.chapterList = inResponse;
 		this.$.manga.destroyComponents();
 		this.$.manga.createComponents([
-					{kind: "Image", sizing:"constrain", style:"width:50%", src: "http://cdn.mangaeden.com/mangasimg/"+this.chapterList.image},
+					{kind: "Image", sizing:"constrain", style: "width: 40%;", src: "http://cdn.mangaeden.com/mangasimg/"+this.chapterList.image},
 					{kind: "FittableRows", components: [
 						{name: "title", content: this.chapterList.title},
 						{name: "description", content: this.chapterList.description},
@@ -106,6 +106,7 @@ enyo.kind({
 			mangaImages[x] = "http://cdn.mangaeden.com/mangasimg/"+this.chapter.images[i][1];
 			x++;
 		}
+		this.$.mangaContent.setImages([]);
 		this.$.mangaContent.setImages(mangaImages);
 		this.$.mangaContent.setIndex(0);
 		this.$.nextButton.show();

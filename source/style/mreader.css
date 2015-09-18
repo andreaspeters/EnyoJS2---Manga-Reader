@@ -29,7 +29,7 @@ div[id ^= "app_mainView_productPanel_manga_title"] {
 div[id ^= "app_mainView_productPanel_manga_description"] {
 	margin-left: 50px;
 	font-size: 13px;
-	width: 50%;
+	width: 40%;
 	padding-bottom: 20px;
 }
 
