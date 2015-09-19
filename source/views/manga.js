@@ -3,9 +3,10 @@ enyo.kind({
 	kind: "FittableRows",
 	classes: "enyo-git",
 	mainMenuPanelsCount: 0,
-	config: {'server': "www.mangaeden.com", 'lastmanga': "", 'lastchapter': ""},
+	config: {'server': "www.mangaeden.com", 'lastmanga': "", 'history': ""},
 	menu: [],
 	index: 0,
+	imageCount: 0,
 	page: 0,
 	components:[
 		{kind: "Panels", name: "mainMenuPanels", arrangerKind: "CardArranger",fit: true, style: "background: url(assets/bg.png);", components: [
@@ -94,6 +95,9 @@ enyo.kind({
 
 		this.$.mangaChapter.render();
 		this.$.mangaChapter.reflow();
+
+		// Aktuellen Manga Merken
+		localStorage.setItem("lastmanga", this.config['lastmanga']);
 	},
 
 	// Den Inhalt eines Kapitels Laden
@@ -106,12 +110,15 @@ enyo.kind({
 			mangaImages[x] = "http://cdn.mangaeden.com/mangasimg/"+this.chapter.images[i][1];
 			x++;
 		}
+		this.imageCount = x - 1;
 		this.$.mangaContent.setImages([]);
 		this.$.mangaContent.setImages(mangaImages);
 		this.$.mangaContent.setIndex(0);
 		this.$.nextButton.show();
 		this.$.prevButton.show();
 		this.$.mangaIndex.show();
+		console.log( this.config['history']);
+		localStorage.setItem("history", this.config['history']);
 	},
 
 	// Kapitel Auswaehlen
@@ -135,6 +142,7 @@ enyo.kind({
 
 	// Uebersicht ueber alle Mangas
 	setupMangaList: function(inSender, inEvent) {
+		this.config['lastmanga'] = this.manga[inEvent.index].i;
 		this.$.mangaName.setContent(this.manga[inEvent.index].t);
 		this.$.mangaTags.setContent(this.manga[inEvent.index].c);
 		if (this.manga[inEvent.index].im) {
@@ -143,9 +151,6 @@ enyo.kind({
 		if (inSender.isSelected(inEvent.index)) {	
 			this.jsonCall("/manga/"+this.manga[inEvent.index].i, enyo.bind(this,"successGetChapterList"), enyo.bind(this, "errorML"));
 			this.$.mainMenuPanels.setIndex(1);
-
-			// Aktuellen Manga Merken
-			localStorage.setItem("lastmanga", this.manga[inEvent.index].i);
 		}
 	},
 
@@ -178,10 +183,12 @@ enyo.kind({
 	},
 
 	next: function(inSender, inEvent) {
-		this.index++;
-		this.$.mangaContent.next();
-		this.$.mangaContent.reflow();
-		this.$.mangaIndex.setContent(this.index);
+		if (this.index < this.imageCount) {
+			this.index++;
+			this.$.mangaContent.next();
+			this.$.mangaContent.reflow();
+			this.$.mangaIndex.setContent(this.index);
+		}
 	},
 
 	onBack: function(inSender, inEvent) {
